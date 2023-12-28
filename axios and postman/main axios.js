@@ -56,7 +56,7 @@ function getTodos() {
         axios.get('https://jsonplaceholder.typicode.com/posts?_limit=5')
       ])
       .then(axios.spread((todos, posts) => showOutput(posts)))
-      .catch(err => console.error(err));
+      .catch(err =>console.error(err));
   }
   
   // CUSTOM HEADERS
