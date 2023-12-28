@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>bookingappointment</title>
+    </head>
+<body>
+    <form onsubmit="onSignUp(event)">
+        <label for="username">Name</label>
+        <input type="text" name="username" id="username" required/>
+        
+        <label for="email">Email</label>
+        <input type="email" name="email" id="email" required/>
+        
+        <label for="ph_number">Phone Number</label>
+        <input type="tel" name="ph_number" id="ph_number" required/>
+        
+        <button type="submit">Sign Up</button>
+    </form>
+
+    <!-- Display list of users -->
+    <ul id="userList"></ul>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.6.3/axios.min.js"></script>
+
+    <script>
+        function onSignUp(event) {
+            event.preventDefault(); // Prevent the default form submission
+
+            // Get form data
+            const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
+            const phNumber = document.getElementById('ph_number').value;
+
+            // Create an object with the form data
+            const userData = {
+                username: username,
+                email: email,
+                ph_number: phNumber
+            };
+
+            // Your CRUD endpoint from crudcrud.com
+            const crudCrudEndpoint = 'https://crudcrud.com/api/7759cebae44b4d5eb4c54a728af9902d/data12';
+
+            // Make a POST request to store the object in the cloud
+            axios.post(crudCrudEndpoint, userData)
+                .then(response => {
+                    console.log('User data stored successfully:', response.data);
+                    // Optionally, you can handle success, e.g., show a success message
+
+                    // Update the list of users (this is just a placeholder, you might need to fetch the list again)
+                    updateListOfUsers();
+                })
+                .catch(error => {
+                    console.error('Error storing user data:', error);
+                    // Optionally, you can handle errors, e.g., show an error message
+                });
+        }
+
+        // Function to update the list of users (placeholder)
+        function updateListOfUsers() {
+            const userListElement = document.getElementById('userList');
+            const listItem = document.createElement('li');
+            listItem.textContent = 'New user added';
+            userListElement.appendChild(listItem);
+        }
+    </script>
+</body>
+</html>
