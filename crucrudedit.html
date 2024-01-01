@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Booking Appointment</title>
+</head>
+<body>
+    <form id="registrationForm" onsubmit="onSignUp(event)">
+        <label for="username">Name</label>
+        <input type="text" name="username" id="username" required/>
+        
+        <label for="email">Email</label>
+        <input type="email" name="email" id="email" required/>
+        
+        <label for="ph_number">Phone Number</label>
+        <input type="tel" name="ph_number" id="ph_number" required/>
+        
+        <input type="hidden" id="userId" />
+        
+        <button type="submit">Save</button>
+    </form>
+
+    <div id="userData">
+        <!-- Display user data here -->
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.6.3/axios.min.js"></script>
+    <script>
+        window.addEventListener("DOMContentLoaded", () => {
+            const userDataContainer = document.getElementById('userData');
+
+            // Make a GET request to retrieve user details using Axios
+            axios.get('https://crudcrud.com/api/8677bb89bf8d40e1bf0552c07ed463f1/details123')
+                .then(response => {
+                    console.log(response);
+                    for(var i=0; i<response.data.length; i++){
+                        showUserOnScreen(response.data[i], userDataContainer);
+                    }
+                })
+                .catch(error => console.error('Error fetching user details:', error))
+                .finally(() => {
+                    // Set up event listeners and any other initialization after data retrieval
+                    setupEventListeners();
+                });
+        });
+
+        function onSignUp(event) {
+            event.preventDefault();
+
+            const userId = document.getElementById('userId').value;
+
+            if (userId) {
+                onUpdateUser(userId);
+            } else {
+                onAddUser();
+            }
+        }
+
+        function onAddUser() {
+            const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
+            const phNumber = document.getElementById('ph_number').value;
+
+            axios.post('https://crudcrud.com/api/8677bb89bf8d40e1bf0552c07ed463f1/details123', {
+                username,
+                email,
+                ph_number: phNumber,
+            })
+            .then(response => {
+                console.log('User details saved successfully:', response.data);
+                showUserOnScreen(response.data, document.getElementById('userData'));
+                resetForm();
+            })
+            .catch(error => console.error('Error saving user details:', error));
+        }
+
+        function onUpdateUser(userId) {
+            const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
+            const phNumber = document.getElementById('ph_number').value;
+
+            axios.put(`https://crudcrud.com/api/8677bb89bf8d40e1bf0552c07ed463f1/details123/${userId}`, {
+                username,
+                email,
+                ph_number: phNumber,
+            })
+            .then(response => {
+                console.log('User details updated successfully:', response.data);
+                updateDisplayedUser(userId, response.data);
+                resetForm();
+            })
+            .catch(error => console.error('Error updating user details:', error));
+        }
+
+        function showUserOnScreen(user, container) {
+            const userElement = document.createElement('div');
+            userElement.innerHTML = `Username: <span data-type="username">${user.username}</span>, Email: <span data-type="email">${user.email}</span>, Phone Number: <span data-type="ph_number">${user.ph_number}</span> 
+                <button class="edit-button" onclick="onEditUser('${user._id}')">Edit</button>
+                <button class="delete-button" onclick="onDeleteUser('${user._id}')">Delete</button>`;
+            
+            userElement.setAttribute('data-id', user._id);
+            
+            container.appendChild(userElement);
+        }
+
+        function onEditUser(userId) {
+            const user = getUserById(userId);
+            if (user) {
+                document.getElementById('username').value = user.username;
+                document.getElementById('email').value = user.email;
+                document.getElementById('ph_number').value = user.ph_number;
+                document.getElementById('userId').value = userId;
+            }
+        }
+
+        function updateDisplayedUser(userId, updatedUserData) {
+            const userElement = document.querySelector(`[data-id="${userId}"]`);
+            if (userElement) {
+                userElement.innerHTML = `Username: <span data-type="username">${updatedUserData.username}</span>, Email: <span data-type="email">${updatedUserData.email}</span>, Phone Number: <span data-type="ph_number">${updatedUserData.ph_number}</span> 
+                    <button class="edit-button" onclick="onEditUser('${userId}')">Edit</button>
+                    <button class="delete-button" onclick="onDeleteUser('${userId}')">Delete</button>`;
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('username').value = '';
+            document.getElementById('email').value = '';
+            document.getElementById('ph_number').value = '';
+            document.getElementById('userId').value = '';
+        }
+
+        function onDeleteUser(userId) {
+            axios.delete(`https://crudcrud.com/api/8677bb89bf8d40e1bf0552c07ed463f1/details123/${userId}`)
+                .then(response => {
+                    console.log('User details deleted successfully:', response.data);
+                    const userElement = document.querySelector(`[data-id="${userId}"]`);
+                    if (userElement) {
+                        userElement.remove();
+                        resetForm();
+                    }
+                })
+                .catch(error => console.error('Error deleting user details:', error));
+        }
+
+        function getUserById(userId) {
+            const userDataContainer = document.getElementById('userData');
+            const userElement = userDataContainer.querySelector(`[data-id="${userId}"]`);
+
+            if (userElement) {
+                const username = userElement.querySelector('span[data-type="username"]').innerText.trim();
+                const email = userElement.querySelector('span[data-type="email"]').innerText.trim();
+                const phNumber = userElement.querySelector('span[data-type="ph_number"]').innerText.trim();
+
+                return { _id: userId, username, email, ph_number: phNumber };
+            }
+
+            return null;
+        }
+
+        function setupEventListeners() {
+            // Add event listeners and any other initialization logic here
+            const editButtons = document.querySelectorAll('.edit-button');
+    
+            editButtons.forEach(button => {
+                button.addEventListener('click', (event) => {
+                    const userId = event.target.getAttribute('data-user-id');
+                    onEditUser(userId);
+                });
+            });
+        }
+    </script>
+</body>
+</html>
