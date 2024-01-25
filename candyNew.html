@@ -22,8 +22,7 @@
         <label for="quantity">Quantity:</label>
         <input type="number" id="quantity" required>
 
-        <button type="submit">Add Item</button>
-        <button type="reset">Reset</button>
+        <button type="submit">Add Item</button>        
     </form>
 </div>
 
@@ -35,12 +34,18 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.6.3/axios.min.js"></script>
 <script>
 function saveCandiesToLocal(candies) {
-  localStorage.setItem('candies', JSON.stringify(candies));
+  return new Promise((resolve) => {
+    localStorage.setItem('candies', JSON.stringify(candies));
+    resolve();
+  });
 }
 
 function getCandiesFromLocal() {
-  const storedCandies = localStorage.getItem('candies');
-  return storedCandies ? JSON.parse(storedCandies) : [];
+  return new Promise((resolve) => {
+    const storedCandies = localStorage.getItem('candies');
+    const candies = storedCandies ? JSON.parse(storedCandies) : [];
+    resolve(candies);
+  });
 }
 
 function displayCandiesOnScreen(candies) {
@@ -52,28 +57,42 @@ function displayCandiesOnScreen(candies) {
   }
 }
 
-window.addEventListener("DOMContentLoaded", () => {
+function fetchDataFromServer(url) {
+  return axios.get(url)
+    .then(response => response.data)
+    .catch(error => {
+      throw new Error(`Error fetching data from server: ${error.message}`);
+    });
+}
+
+function initializeCandies() {
   const storedCandies = getCandiesFromLocal();
 
   if (storedCandies.length > 0) {
     displayCandiesOnScreen(storedCandies);
+    return Promise.resolve(storedCandies);
   } else {
-    axios.get('https://crudcrud.com/api/c39719bdb03d442b9336a7070fda07f9/candy')
-      .then((res) => {
+    return fetchDataFromServer('https://crudcrud.com/api/c39719bdb03d442b9336a7070fda07f9/candy')
+      .then(res => {
         console.log(res);
-        const candies = res.data.filter(candy => candy.quantity && candy.candyName && candy.description && candy.price);
-        saveCandiesToLocal(candies);
-        displayCandiesOnScreen(candies);
+        const candies = res.filter(candy => candy.quantity && candy.candyName && candy.description && candy.price);
+        return saveCandiesToLocal(candies)
+          .then(() => candies);
       })
-      .catch((err) => {
-        document.body.innerHTML = "<h4> ERROR!</h4>";
-        console.log(err);
+      .catch(err => {
+        document.body.innerHTML = `<h4> ERROR! ${err.message}</h4>`;
+        console.error(err);
+        throw err;
       });
   }
+}
+
+window.addEventListener("DOMContentLoaded", () => {
+  initializeCandies().then(displayCandiesOnScreen);
 });
 
 function updateCandiesInLocal(candies) {
-  saveCandiesToLocal(candies);
+  return saveCandiesToLocal(candies);
 }
 
 function addToStock(event) {
@@ -96,14 +115,18 @@ function addToStock(event) {
     }
   })
   .then((res) => {
-    const candies = getCandiesFromLocal();
-    candies.push(res.data);
-    updateCandiesInLocal(candies);
-    showCandyOnScreen(res.data);
-    console.log(res);
+    return getCandiesFromLocal().then(candies => {
+      candies.push(res.data);
+      return updateCandiesInLocal(candies)
+        .then(() => res.data);
+    });
+  })
+  .then((candy) => {
+    showCandyOnScreen(candy);
+    console.log(candy);
   })
   .catch((err) => {
-    document.body.innerHTML = "<h4> ERROR!</h4>";
+    document.body.innerHTML = `<h4> ERROR! ${err.message}</h4>`;
     console.log(err);
   });
 
@@ -145,15 +168,16 @@ function createBuyButton(candy, quantity) {
 function handleBuy(candy, quantity) {
   if (candy.quantity >= quantity) {
     candy.quantity -= quantity;
-    updateQuantityOnServer(candy._id, candy.quantity, candy.candyName, candy.description, candy.price);
-    updateQuantityOnScreen(candy);
+    updateQuantityOnServer(candy._id, candy.quantity, candy.candyName, candy.description, candy.price)
+      .then(() => updateQuantityOnScreen(candy))
+      .catch(err => console.error(err));
   } else {
     console.log("Error: Insufficient quantity!");
   }
 }
 
 function updateQuantityOnServer(candyId, newQuantity, candyName, description, price) {
-  axios.put(`https://crudcrud.com/api/c39719bdb03d442b9336a7070fda07f9/candy/${candyId}`, {
+  return axios.put(`https://crudcrud.com/api/c39719bdb03d442b9336a7070fda07f9/candy/${candyId}`, {
     candyName: candyName,
     description: description,
     price: price,
@@ -164,6 +188,7 @@ function updateQuantityOnServer(candyId, newQuantity, candyName, description, pr
   })
   .catch((err) => {
     console.log(err);
+    throw new Error(`Error updating quantity on server: ${err.message}`);
   });
 }
 
@@ -171,21 +196,24 @@ function updateQuantityOnScreen(candy) {
   const itemList = document.getElementById('listofitems');
   const candyElement = Array.from(itemList.children).find(elem => elem.textContent.includes(candy.candyName));
   if (candyElement) {
-  candyElement.textContent = `${candy.candyName} - ${candy.description} - ${candy.price} - ${candy.quantity}`;
+    candyElement.textContent = `${candy.candyName} - ${candy.description} - ${candy.price} - ${candy.quantity}`;
 
-  const buy1Button = createBuyButton(candy, 1);
-  const buy2Button = createBuyButton(candy, 2);
-  const buy3Button = createBuyButton(candy, 3);
+    const buy1Button = createBuyButton(candy, 1);
+    const buy2Button = createBuyButton(candy, 2);
+    const buy3Button = createBuyButton(candy, 3);
 
-  candyElement.appendChild(buy1Button);
-  candyElement.appendChild(buy2Button);
-  candyElement.appendChild(buy3Button);
+    candyElement.appendChild(buy1Button);
+    candyElement.appendChild(buy2Button);
+    candyElement.appendChild(buy3Button);
 
-  const candies = getCandiesFromLocal();
-    const updatedCandies = candies.map(item => (item._id === candy._id ? candy : item));
-    updateCandiesInLocal(updatedCandies);
+    return getCandiesFromLocal().then(candies => {
+      const updatedCandies = candies.map(item => (item._id === candy._id ? candy : item));
+      return updateCandiesInLocal(updatedCandies);
+    });
   }
 }
 </script>
 </body>
 </html>
+
+ 
